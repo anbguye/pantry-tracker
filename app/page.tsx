@@ -1,20 +1,20 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { getStorage } from "firebase/storage";
+//import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+//import { getStorage } from "firebase/storage";
 import { db} from "./firebase";
 
 
 import {
   collection,
   addDoc,
-  doc,
+//  doc,
   deleteDoc,
-  getDoc,
+ // getDoc,
   getDocs,
   query,
-  QuerySnapshot,
+//  QuerySnapshot,
   onSnapshot,
 } from "firebase/firestore";
 
@@ -31,12 +31,16 @@ import {
 } from "@/components/ui/card";
 import {
   Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
+//  DialogContent,
+//  DialogHeader,
+ // DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Camera, Search, Plus, Trash2, Edit, ChefHat } from "lucide-react";
+import {
+ // Camera,
+ // Search,
+  Plus, Trash2, Edit, ChefHat
+} from "lucide-react";
 
 // Define the type for the items
 interface Item {
@@ -78,7 +82,7 @@ const addItem = async (e: React.FormEvent) => {
   useEffect(() => {
     const q = query(collection(db, "items"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      let itemsArr: Item[] = [];
+      const itemsArr: Item[] = [];
       querySnapshot.forEach((doc) => {
         const data = doc.data();
         itemsArr.push({
@@ -183,7 +187,7 @@ const addItem = async (e: React.FormEvent) => {
                 />
               </div>
               <div className="flex flex-col space-y-1.5">
-                <Label htmlFor="image">Image (as a url plz 😂 for now) </Label>
+                <Label htmlFor="image">Image as URL </Label>
                 <Input
                   value={newItem.imageUrl}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
@@ -211,7 +215,7 @@ const addItem = async (e: React.FormEvent) => {
               Suggest Recipe
             </Button>
           </DialogTrigger>
-          <p>Here's a recipe suggestion based on your pantry items...</p>
+          <p>Here&aps;s a recipe suggestion based on your pantry items...</p>
         </Dialog>
       </div>
     </main>
