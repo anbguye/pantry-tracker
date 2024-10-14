@@ -215,7 +215,7 @@ const addItem = async (e: React.FormEvent) => {
               Suggest Recipe
             </Button>
           </DialogTrigger>
-          <p>Here&aps;s a recipe suggestion based on your pantry items...</p>
+          <p>Here is a recipe suggestion based on your pantry items...</p>
         </Dialog>
       </div>
     </main>
