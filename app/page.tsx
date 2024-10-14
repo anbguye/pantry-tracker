@@ -1,45 +1,20 @@
 "use client";
 
+// Import the React module
 import React, { useState, useEffect } from "react";
+
+// Import the Firebase modules
 import { ref, uploadBytes, getDownloadURL, getStorage , deleteObject } from "firebase/storage";
-import { db} from "./firebase";
+import { db } from "./firebase";
+import {collection,addDoc,deleteDoc,getDocs,query,onSnapshot,} from "firebase/firestore";
 
-
-import {
-  collection,
-  addDoc,
-//  doc,
-  deleteDoc,
- // getDoc,
-  getDocs,
-  query,
-  //  QuerySnapshot,
-  onSnapshot,
-} from "firebase/firestore";
-
-
+// Import the UI components
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Dialog,
-//  DialogContent,
-//  DialogHeader,
- // DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
- // Camera,
- // Search,
-  Plus, Trash2, Edit, ChefHat
-} from "lucide-react";
+import {  Card,  CardContent,  CardFooter,  CardHeader, CardTitle} from "@/components/ui/card";
+import { Dialog,  DialogTrigger} from "@/components/ui/dialog";
+import {  Plus, Trash2, Edit, ChefHat } from "lucide-react";
 
 // Define the type for the items
 interface Item {
@@ -51,11 +26,8 @@ interface Item {
 
 export default function Home() {
 
-
   // Items state
-  const [items, setItems] = useState<Item[]>([
-
-  ]);
+  const [items, setItems] = useState<Item[]>([]);
 
   // Item state
   const [newItem, setNewItem] = useState<Item>({
@@ -65,8 +37,21 @@ export default function Home() {
     imageUrl: "",
   });
 
+  // Search state
+const [searchQuery, setSearchQuery] = useState("");
+const [filteredItems, setFilteredItems] = useState<Item[]>([]);
+
+const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const query = e.target.value;
+  setSearchQuery(query);
+  const filtered = items.filter((item) => item.name.toLowerCase().includes(query.toLowerCase()));
+  setFilteredItems(filtered);
+}
+  
+  // Image state
   const [imageFile, setImageFile] = useState<File | null>(null)
 
+  // Handle file upload
   const handleFileUpload = async (file: File) => {
     const storage = getStorage();
     const storageRef = ref(storage, `images/${file.name}`);
@@ -75,7 +60,7 @@ export default function Home() {
     return downloadURL;
   }
 
-  // Add item to db
+// Add item to db
 const addItem = async (e: React.FormEvent) => {
   e.preventDefault();
   if (newItem.name && imageFile) {
@@ -93,6 +78,7 @@ const addItem = async (e: React.FormEvent) => {
   }
 };
 
+  // Fetch items from db
   useEffect(() => {
     const q = query(collection(db, "items"));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -131,18 +117,59 @@ const addItem = async (e: React.FormEvent) => {
           await deleteObject(imageRef)
         } 
 
+        // Update the state
+        setItems(prevItems => prevItems.filter(item => item.name !== name))
+        setFilteredItems(prevFilteredItems => prevFilteredItems.filter(item => item.name !== name))
       }
     })
 
 };
 
+  // Return the UI
   return (
     <main>
       <div className="container mx-auto p-4">
         <h1 className="text-3x1 font-bold mb-4">Pantry Tracker</h1>
         <div className="mb-4">
-          <input type="text" placeholder="search items..." className="w-full" />
+          <input
+            type="text"
+            placeholder="search items..."
+            className="w-full"
+            value={searchQuery}
+            onChange={handleSearch}
+          />
         </div>
+
+        {searchQuery && (
+          <div className="grid grid-cols-2 md:grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+            {filteredItems.map((item, index) => (
+              <Card key={index}>
+                <CardHeader>
+                  <CardTitle>{item.name}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <img src={item.imageUrl} alt={item.name} />
+                  <p>
+                    {item.quantity} {item.unit}
+                  </p>
+                </CardContent>
+                <CardFooter className="flex justify-between">
+                  <Button variant="outline">
+                    <Edit className="w-4 h04 mr-2"></Edit>
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      deleteItem(item.name);
+                    }}
+                    variant="destructive"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2">Delete</Trash2>
+                  </Button>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        )}
 
         <div className="grid grid-cols-2 md:grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
           {items.map((item, index) => (
@@ -161,8 +188,11 @@ const addItem = async (e: React.FormEvent) => {
                   <Edit className="w-4 h04 mr-2"></Edit>
                 </Button>
                 <Button
-                  onClick={() => {deleteItem(item.name);}}
-                  variant="destructive">
+                  onClick={() => {
+                    deleteItem(item.name);
+                  }}
+                  variant="destructive"
+                >
                   <Trash2 className="w-4 h-4 mr-2">Delete</Trash2>
                 </Button>
               </CardFooter>
@@ -218,7 +248,7 @@ const addItem = async (e: React.FormEvent) => {
                 <Input
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                     if (e.target.files && e.target.files[0]) {
-                      setImageFile(e.target.files[0])
+                      setImageFile(e.target.files[0]);
                     }
                   }}
                   id="image"
