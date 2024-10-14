@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-//import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-//import { getStorage } from "firebase/storage";
+import { ref, uploadBytes, getDownloadURL, getStorage , deleteObject } from "firebase/storage";
 import { db} from "./firebase";
 
 
@@ -14,7 +13,7 @@ import {
  // getDoc,
   getDocs,
   query,
-//  QuerySnapshot,
+  //  QuerySnapshot,
   onSnapshot,
 } from "firebase/firestore";
 
@@ -66,16 +65,31 @@ export default function Home() {
     imageUrl: "",
   });
 
+  const [imageFile, setImageFile] = useState<File | null>(null)
+
+  const handleFileUpload = async (file: File) => {
+    const storage = getStorage();
+    const storageRef = ref(storage, `images/${file.name}`);
+    await uploadBytes(storageRef, file);
+    const downloadURL = await getDownloadURL(storageRef);
+    return downloadURL;
+  }
+
   // Add item to db
 const addItem = async (e: React.FormEvent) => {
   e.preventDefault();
-  if (newItem.name) {
+  if (newItem.name && imageFile) {
+    const imageUrl = await handleFileUpload(imageFile);
     await addDoc(collection(db, "items"), {
-      name: newItem.name,
-      quantity: newItem.quantity,
-      unit: newItem.unit,
-      imageUrl: newItem.imageUrl,
+      ...newItem, imageUrl
     });
+    setNewItem({
+      name: "",
+      quantity: 0,
+      unit: "",
+      imageUrl: "",
+    })
+    setImageFile(null);
   }
 };
 
@@ -104,9 +118,22 @@ const addItem = async (e: React.FormEvent) => {
     const querySnapshot = await getDocs(q);
     querySnapshot.forEach(async (doc) => {
       if (doc.data().name === name) {
+        const data = doc.data();
+        const imageUrl = data.imageUrl
+
         await deleteDoc(doc.ref);
+
+        if (imageUrl) {
+          const storage = getStorage()
+          const url = new URL(imageUrl)
+          const imagePath = decodeURIComponent(url.pathname.split('/o/')[1])
+          const imageRef = ref(storage, imagePath)
+          await deleteObject(imageRef)
+        } 
+
       }
-    });
+    })
+
 };
 
   return (
@@ -187,15 +214,15 @@ const addItem = async (e: React.FormEvent) => {
                 />
               </div>
               <div className="flex flex-col space-y-1.5">
-                <Label htmlFor="image">Image as URL </Label>
+                <Label htmlFor="image">Image</Label>
                 <Input
-                  value={newItem.imageUrl}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                    setNewItem({ ...newItem, imageUrl: e.target.value });
+                    if (e.target.files && e.target.files[0]) {
+                      setImageFile(e.target.files[0])
+                    }
                   }}
                   id="image"
-                  type="string"
-                  accept="image/*"
+                  type="file"
                 ></Input>
               </div>
             </div>
