@@ -28,6 +28,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import Image from 'next/image';
 import {
   Dialog,
   DialogContent,
@@ -36,6 +37,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Plus, Trash2, Edit, ChefHat } from "lucide-react";
+import Groq from "groq-sdk";
 
 interface Item {
   id: string;
@@ -46,6 +48,10 @@ interface Item {
 }
 
 export default function Home() {
+  const client = new Groq({
+    apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
+    dangerouslyAllowBrowser: true
+  });
   const [items, setItems] = useState<Item[]>([]);
   const [newItem, setNewItem] = useState<Omit<Item, "id">>({
     name: "",
@@ -58,6 +64,7 @@ export default function Home() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [recipe, setRecipe] = useState("");
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value;
@@ -157,6 +164,22 @@ export default function Home() {
     }
   };
 
+  async function main() {
+    const pantryItemsString = items.map((item) => item.name).join(", ");
+    const chatCompletion = await client.chat.completions.create({
+      messages: [
+        {
+          role: "user", content: `Give me a recipe with included steps based off given pantry: ${pantryItemsString}` },
+      ],
+      model: "llama3-8b-8192",
+    });
+
+    if (chatCompletion.choices[0].message.content) {
+      setRecipe(chatCompletion.choices[0].message.content);
+    }
+    
+  }
+
   return (
     <main>
       <div className="container mx-auto p-4">
@@ -178,9 +201,11 @@ export default function Home() {
                 <CardTitle>{item.name}</CardTitle>
               </CardHeader>
               <CardContent>
-                <img
+                <Image
                   src={item.imageUrl}
                   alt={item.name}
+                  width={500}
+                  height={500}
                   className="w-full h-48 object-cover mb-2"
                 />
                 <p>
@@ -318,13 +343,18 @@ export default function Home() {
 
         <Dialog>
           <DialogTrigger asChild>
-            <Button className="mt-4">
+            <Button className="mt-4" onClick={main}>
               <ChefHat className="w-4 h-4 mr-2" />
               Suggest Recipe
             </Button>
           </DialogTrigger>
           <DialogContent>
             <p>Here is a recipe suggestion based on your pantry items...</p>
+            <pre
+              className="bg-gray-100 p-4 rounded-md overflow-auto text-sm max-h-96"
+              style={{ whiteSpace: "pre-wrap", wordWrap: "break-word" }}>
+              {recipe}
+            </pre>
           </DialogContent>
         </Dialog>
       </div>
