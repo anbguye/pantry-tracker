@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/dialog";
 import { Plus, Trash2, Edit, ChefHat } from "lucide-react";
 import Groq from "groq-sdk";
+import { v4 as uuidv4 } from 'uuid'; // Import UUID library
 
 interface Item {
   id: string;
@@ -67,7 +68,6 @@ export default function Home() {
   const [recipe, setRecipe] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value;
     setSearchQuery(query);
@@ -79,7 +79,8 @@ export default function Home() {
 
   const handleFileUpload = async (file: File) => {
     const storage = getStorage();
-    const storageRef = ref(storage, `images/${file.name}`);
+    const uniqueImageName = `${uuidv4()}_${file.name}`;
+    const storageRef = ref(storage, `images/${uniqueImageName}`);
     await uploadBytes(storageRef, file);
     return getDownloadURL(storageRef);
   };
