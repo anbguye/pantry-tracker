@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef} from "react";
 import {
   ref,
   uploadBytes,
@@ -65,6 +65,8 @@ export default function Home() {
   const [editingItem, setEditingItem] = useState<Item | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [recipe, setRecipe] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value;
@@ -97,6 +99,11 @@ export default function Home() {
         imageUrl: "",
       });
       setImageFile(null);
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+
     }
   };
 
@@ -169,7 +176,7 @@ export default function Home() {
     const chatCompletion = await client.chat.completions.create({
       messages: [
         {
-          role: "user", content: `Give me a recipe with included steps based off given pantry: ${pantryItemsString}` },
+          role: "user", content: `Give me a recipe with included steps based off given pantry: ${pantryItemsString}.` },
       ],
       model: "llama3-8b-8192",
     });
