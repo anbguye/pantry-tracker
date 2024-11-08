@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Search, Plus, Trash2, Edit, ChefHat, Upload } from "lucide-react";
+import { Search, Plus, Trash2, Edit, ChefHat, Upload, Loader2 } from "lucide-react";
 import Groq from "groq-sdk";
 import { v4 as uuidv4 } from "uuid";
 
@@ -68,6 +68,13 @@ export default function PantryTracker() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [recipe, setRecipe] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isLoading, setIsLoading] = useState({
+    addItem: false,
+    deleteItem: false,
+    generateRecipe: false
+  });
+  const [error, setError] = useState<string | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<Item | null>(null);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value;
@@ -86,9 +93,31 @@ export default function PantryTracker() {
     return getDownloadURL(storageRef);
   };
 
+  const validateItem = (item: Omit<Item, "id">) => {
+    if (!item.name.trim()) return "Item name is required";
+    if (item.quantity < 0) return "Quantity cannot be negative";
+    if (!item.unit.trim()) return "Unit is required";
+    return null;
+  };
+
   const addItem = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newItem.name && imageFile) {
+    const validationError = validateItem(newItem);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+    if (!newItem.name) {
+      setError("Please enter an item name");
+      return;
+    }
+    if (!imageFile) {
+      setError("Please select an image");
+      return;
+    }
+    
+    setIsLoading(prev => ({ ...prev, addItem: true }));
+    try {
       const imageUrl = await handleFileUpload(imageFile);
       await addDoc(collection(db, "items"), {
         ...newItem,
@@ -105,6 +134,10 @@ export default function PantryTracker() {
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setIsLoading(prev => ({ ...prev, addItem: false }));
     }
   };
 
@@ -246,7 +279,7 @@ export default function PantryTracker() {
                       <Button
                         variant="outline"
                         size="icon"
-                        onClick={() => deleteItem(item.id, item.imageUrl)}
+                        onClick={() => setItemToDelete(item)}
                       >
                         <Trash2 className="h-5 w-5" />
                       </Button>
@@ -263,6 +296,11 @@ export default function PantryTracker() {
               <CardTitle className="text-xl">Add New Item</CardTitle>
             </CardHeader>
             <CardContent>
+              {error && (
+                <div className="mb-4 p-3 text-red-500 bg-red-50 rounded-md">
+                  {error}
+                </div>
+              )}
               <div className="grid gap-4">
                 <div className="grid gap-1">
                   <Label htmlFor="name" className="text-base">
@@ -341,8 +379,20 @@ export default function PantryTracker() {
               </div>
             </CardContent>
             <CardFooter>
-              <Button className="w-full py-2 text-base" onClick={addItem}>
-                <Plus className="w-4 h-4 mr-2" /> Add Item
+              <Button 
+                className="w-full py-2 text-base" 
+                onClick={addItem} 
+                disabled={isLoading.addItem}
+              >
+                {isLoading.addItem ? (
+                  <span className="flex items-center">
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Adding...
+                  </span>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4 mr-2" /> Add Item
+                  </>
+                )}
               </Button>
             </CardFooter>
           </Card>
@@ -398,6 +448,31 @@ export default function PantryTracker() {
           <Button onClick={saveEdit} className="w-full py-2 text-base">
             Save Changes
           </Button>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!itemToDelete} onOpenChange={() => setItemToDelete(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+          </DialogHeader>
+          <p>Are you sure you want to delete {itemToDelete?.name}?</p>
+          <div className="flex justify-end space-x-2 mt-4">
+            <Button variant="outline" onClick={() => setItemToDelete(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (itemToDelete) {
+                  deleteItem(itemToDelete.id, itemToDelete.imageUrl);
+                  setItemToDelete(null);
+                }
+              }}
+            >
+              Delete
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
